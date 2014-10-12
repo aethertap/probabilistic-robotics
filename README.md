@@ -19,7 +19,7 @@ we'll end up with deep knowledge of the subject.
 
 ### Caveat Emptor
 
-I'm not an expert in this stuff, so it's likely that my solutions will be
+I'm not an expert in this stuff (yet), so it's likely that my solutions will be
 incomplete, incorrect, or otherwise flawed! I would be extremely happy to get
 pull requests with corrections, alternative solutions, and additional
 flashcards (or better versions of the existing ones), or anything else that
