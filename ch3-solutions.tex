@@ -1,0 +1,75 @@
+
+\documentclass[10pt]{article}
+\usepackage{amsmath}
+\begin{document}
+\title{Solutions for Chapter 3 of Probabilistic Robotics}
+
+\section{Problem 1}
+\begin{enumerate}
+  \item In this and the following exercises, you are aksed to design a Kalman
+filter for a simple dynamical system: a car with linear dynamics moving in a
+linear environment. Assume $\delta t = 1$ for simplicity. The position of the
+car at time $t$ is given by $x_t$. Its velocity is given by $\dot{x}_t$, and its
+acceleration is given by $\ddot{x}_t$. Suppose the acceleration is set
+randomly at each point in time, according to a Gaussian with zero mean and
+covariance $\sigma^2 = 1$.
+
+  \begin{enumerate}
+  \item \textit{What is a minimal state vector for the Kalman filter (so that the
+resulting system is Markovian)?} 
+
+At first glance it's tempting to think we just need to have the acceleration,
+because the velocity and position can be derived from that.  However, we need to
+keep track of the velocity and position as well because otherwise we'd have to
+keep the entire history of acceleration along with the initial conditions in
+order to recover the constants of integration for each quantity (i.e. the state
+would not satisfy the Markov assumption). So our state vector should be
+$$ \begin{pmatrix} x_t \\ \dot{x}_t \\ \ddot{x}_t \end{pmatrix} $$
+
+  \item \textit{For your state vector, design the state transition probability 
+  $p(x_t | u_t,x_{t-1})$. Hint: this transition function will possess linear
+  matrices $A$ and $B$ and a noise covariance $R$.}
+
+  The state transition \textit{function} is going to be the basic equations of
+  motion for each term in the state vector:
+
+  \begin{math}
+  x_t = x_{t-1} + \dot{x}_t \Delta t \\ 
+  \dot{x}_t = \dot{x}_{t-1} + \ddot{x}_t \Delta t \\ 
+  \ddot{x}_t = 1^*\\ 
+  \end{math}
+  *: The acceleration will be altered by the noise term. 1 is the mean, so we
+  leave that in for this part.
+
+  Switching to matrix notation:
+
+  $$
+  \begin{pmatrix} x_t \\ \dot{x}_t \\ \ddot{x}_t \end{pmatrix} = 
+  \begin{pmatrix} 1 & \Delta t & 0 \\ 0 & 1 & \Delta t  \\ 0 & 0 & 0 \end{pmatrix} 
+  \begin{pmatrix} x_{t-1} \\ \dot{x}_{t-1} \\ \ddot{x}_{t-1} \end{pmatrix} + B u_t + \delta t
+  $$
+
+  Now for the control action, we only set the acceleration so it's
+  one-dimensional. In order to make it add to the state vector with the
+  appropriate result, we need to make a 3x1 matrix and multiply it by the
+  acceleration value (which has mean 1):
+
+  $$ B u_t = \begin{pmatrix} 0 \\ 0 \\ 1 \end{pmatrix} 1$$
+
+  Finally, we need to add in the error term to capture the uncertainty. We know
+  that it's gaussian with mean 1, but we accounted for the mean in the control
+  update term so we'll use a mean of zero for the error variance here. The
+  expression we're going to create is a probability distribution, meaning that
+  it has to be a function of the state. Since the state is vector-valued, and
+  since the probability is only specified for the acceleration, we can select
+  the acceleration term by designing an appropriate matrix for the covariance.
+
+  The multivariate gaussian is defined as: 
+  $$ p(x) = det(2\pi \Sigma)^{-\frac{1}{2}} e^{-\frac{1}{2} (x - \mu)^T
+  \Sigma^{-1} (x - \mu)} $$
+
+\end{enumerate}
+
+\end{enumerate}
+
+\end{document}
