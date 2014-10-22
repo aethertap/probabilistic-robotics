@@ -6,7 +6,7 @@
 
 \section{Problem 1}
 \begin{enumerate}
-  \item In this and the following exercises, you are aksed to design a Kalman
+  \item In this and the following exercises, you are asked to design a Kalman
 filter for a simple dynamical system: a car with linear dynamics moving in a
 linear environment. Assume $\delta t = 1$ for simplicity. The position of the
 car at time $t$ is given by $x_t$. Its velocity is given by $\dot{x}_t$, and its
@@ -16,70 +16,82 @@ covariance $\sigma^2 = 1$.
 
   \begin{enumerate}
   \item \textit{What is a minimal state vector for the Kalman filter (so that the
-resulting system is Markovian)?} 
+    resulting system is Markovian)?} 
 
-At first glance it's tempting to think we just need to have the acceleration,
-because the velocity and position can be derived from that.  However, we need to
-keep track of the velocity and position as well because otherwise we'd have to
-keep the entire history of acceleration along with the initial conditions in
-order to recover the constants of integration for each quantity (i.e. the state
-would not satisfy the Markov assumption). So our state vector should be
-$$ \begin{pmatrix} x_t \\ \dot{x}_t \\ \ddot{x}_t \end{pmatrix} $$
+    In order to be Markovian, we have to have a state vector such that the
+    future and the past are independent given the present state. If the state
+    vector has the position and velocity, this condition is met. All of the
+    acceleration values of the past are completely summarized in the position
+    and velocity, so keeping it as a state variable doesn't tell us anything new
+    in terms of predicting the future. The acceleration is set randomly at each
+    time step, but given that we know the position and velocity we don't need to
+    know any past acceleration in order to compute the future given the state
+    and the control (which in this case will be setting the acceleration).
+
+    Our state vector is thus:
+  $$\begin{pmatrix}x_t \\ \dot{x}_t\end{pmatrix}$$
 
   \item \textit{For your state vector, design the state transition probability 
-  $p(x_t | u_t,x_{t-1})$. Hint: this transition function will possess linear
+    $p(x_t | u_t,x_{t-1})$. Hint: this transition function will possess linear
   matrices $A$ and $B$ and a noise covariance $R$.}
 
-  The state transition \textit{function} is going to be the basic equations of
-  motion for each term in the state vector:
+  We will use the moments parameterization since we're building a Kalman filter.
+  The state transition function is of the form
+  $$x_t = A x_{t-1} + B u_t + \epsilon_t$$
 
-  \begin{math}
-  x_t = x_{t-1} + \dot{x}_t \Delta t \\ 
-  \dot{x}_t = \dot{x}_{t-1} + \ddot{x}_t \Delta t \\ 
-  \ddot{x}_t = 0\\ 
-  \end{math}
-  The acceleration will be altered by the control action and noise term. 1 is
-  the mean, so the control should be to set the acceleration to 1. This
-  portion of the update is just concerned with non-control stuff (momentum and
-  position).
+  Where $\epsilon_t$ is a gaussian random variable with mean zero (because the
+  specified mean of 1 will be part of the control update) and variance 1 (as
+  given in the problem).
+ 
+  The mean for our distribution is given by $A x_{t-1} + B u_t$, and the
+  variance is given by $A\Sigma_{t-1}A^T + cov(\epsilon_t)$. The
+  $A\Sigma_{t-1}A^T$ term carries forward the covariance from the previous state
+  updated by the state transition function. The $cov(\epsilon_t)$ term is the
+  new error added in by the control action.
 
-  Switching to matrix notation:
+  All that remains is to use the equations of motion to derive matrices for $A$
+  and $B$. We know that:
+  \begin{gather}
+  x_t = x_{t-1} + \dot{x}_{t-1} \Delta t \\ 
+  \dot{x}_t = \dot{x}_{t-1} + \ddot{x}_{t-1} \Delta t
+  \end{gather}
+
+  We're going to ignore the acceleration term ($\ddot{x}_{t-1}$) here though
+  because we don't have that available in the state vector - it's part of the
+  control update. The control update will update the velocity based on the
+  acceleration value:
+
+  $$\Delta\dot{x}_t = \ddot{x}_t\Delta t$$
+
+  Now, in matrix form:
 
   $$
-  \begin{pmatrix} x_t \\ \dot{x}_t \\ \ddot{x}_t \end{pmatrix} = 
-  \begin{pmatrix} 1 & \Delta t & 0 \\ 0 & 1 & \Delta t  \\ 0 & 0 & 0 \end{pmatrix} 
-  \begin{pmatrix} x_{t-1} \\ \dot{x}_{t-1} \\ \ddot{x}_{t-1} \end{pmatrix} + B u_t + \delta t
+\overline{\mu}_t = \begin{pmatrix}x_t \\ \dot{x}_t\end{pmatrix} = 
+\begin{pmatrix}1 & \Delta t \\ 0 & 1\end{pmatrix} \begin{pmatrix}x_{t-1} \\
+\dot{x}_{t-1} \end{pmatrix}+
+\begin{pmatrix}0 \\ 1\end{pmatrix} (1 \Delta t)
   $$
 
-  Now for the control action, we only set the acceleration so it's
-  one-dimensional. In order to make it add to the state vector with the
-  appropriate result, we need to make a 3x1 matrix and multiply it by the
-  acceleration value (which has mean 1):
+  Next we need to model the covariance. Since we are given the variance of the
+  acceleration (=1), we have to figure out how that maps into variance of the
+  two state variables and make a variance vector accordingly. Acceleration
+  doesn't directly affect the position, but it does affect the velocity. Our
+  state variance vector then looks like this:
 
-  $$ B u_t = \begin{pmatrix} 0 \\ 0 \\ 1 \end{pmatrix} 1$$
-
-  Since we're using the moments parameterization of the gaussian distribution,
-  this gives us our prediction mean:
-
-  $$ 
-  \overline{\mu}_t = \begin{pmatrix} 1 & \Delta t & 0 \\ 0 & 1 & \Delta t  \\ 0 & 0 & 0 \end{pmatrix}
-  \begin{pmatrix} x_{t-1} \\ \dot{x}_{t-1} \\ \ddot{x}_{t-1} \end{pmatrix} + 
-  \begin{pmatrix} 0 \\ 0 \\ 1 \end{pmatrix} 1
+  $$
+\begin{pmatrix}\sigma_x^2 \\ \sigma_{\dot{x}}^2\end{pmatrix} = 
+\begin{pmatrix}0 \\ 1\Delta t\end{pmatrix}
   $$
 
-  Finally, we need to add in the error term to capture the uncertainty. We know
-  that it's gaussian with mean 1, but we accounted for the mean in the control
-  update term so we'll use a mean of zero for the error variance here. The
-  expression we're going to create is a probability distribution, meaning that
-  it has to be a function of the state. Since the state is vector-valued, and
-  since the probability is only specified for the acceleration, we can select
-  the acceleration term by designing an appropriate matrix for the covariance.
+  With that variance vector, we can calculate the covariance as
+  $\vec{v}\vec{v}^T$:
+  $$
+\begin{pmatrix}0 \\ \Delta t\end{pmatrix}\begin{pmatrix}0 & \Delta
+t\end{pmatrix} = 
+\begin{pmatrix}0 & 0 \\ 0 & \Delta t^2\end{pmatrix}
+$$
 
-  The multivariate gaussian is defined as: 
-  $$ p(x) = det(2\pi \Sigma)^{-\frac{1}{2}} e^{-\frac{1}{2} (x - \mu)^T
-  \Sigma^{-1} (x - \mu)} $$
-
-\end{enumerate}
+  \end{enumerate}
 
 \end{enumerate}
 
