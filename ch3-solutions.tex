@@ -52,24 +52,29 @@ covariance $\sigma^2 = 1$.
   All that remains is to use the equations of motion to derive matrices for $A$
   and $B$. We know that:
   \begin{gather}
-  x_t = x_{t-1} + \dot{x}_{t-1} \Delta t \\ 
-  \dot{x}_t = \dot{x}_{t-1} + \ddot{x}_{t-1} \Delta t
+    x_t = x_{t-1} + \dot{x}_{t-1} \Delta t \\ 
+    \dot{x}_t = \dot{x}_{t-1} + \ddot{x}_{t-1} \Delta t
   \end{gather}
 
-  We're going to ignore the acceleration term ($\ddot{x}_{t-1}$) here though
-  because we don't have that available in the state vector - it's part of the
-  control update. The control update will update the velocity based on the
+  We're going to ignore the acceleration term ($\ddot{x}_{t-1}\Delta t$) here
+  though because we don't have that available in the state vector - it's part of
+  the control update. The control update will update the velocity based on the
   acceleration value:
 
-  $$\Delta\dot{x}_t = \ddot{x}_t\Delta t$$
+  \begin{gather}
+    \Delta\dot{x}_t = \ddot{x}_t\Delta t 
+  \end{gather}
 
-  Now, in matrix form:
+  Which makes our control term look like this:
+$$B_t u_t = \begin{pmatrix} 0 \\ 1\end{pmatrix} \left (1 \Delta t\right)$$
+
+  Now, our prediction of the overall mean, in matrix form:
 
   $$
 \overline{\mu}_t = \begin{pmatrix}x_t \\ \dot{x}_t\end{pmatrix} = 
 \begin{pmatrix}1 & \Delta t \\ 0 & 1\end{pmatrix} \begin{pmatrix}x_{t-1} \\
 \dot{x}_{t-1} \end{pmatrix}+
-\begin{pmatrix}0 \\ 1\end{pmatrix} (1 \Delta t)
+\begin{pmatrix}0 \\ 1\end{pmatrix} \Delta t
   $$
 
   Next we need to model the covariance. Since we are given the variance of the
@@ -80,7 +85,7 @@ covariance $\sigma^2 = 1$.
 
   $$
 \begin{pmatrix}\sigma_x^2 \\ \sigma_{\dot{x}}^2\end{pmatrix} = 
-\begin{pmatrix}0 \\ 1\Delta t\end{pmatrix}
+\begin{pmatrix}0 \\ \Delta t\end{pmatrix}
   $$
 
   With that variance vector, we can calculate the covariance as
