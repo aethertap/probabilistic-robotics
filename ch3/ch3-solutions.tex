@@ -103,14 +103,10 @@ it out. C'est la vie.
   That gives us what we need to figure out how the random acceleration should
   affect our estimates for position and velocity. The variance of velocity
   should be equal to the variance of acceleration times the time elapsed, and
-  the variance of position should be equal to half of that. I'm not sure that
-  the zeros are correct in this matrix, but I can't think of how position and
-  velocity would be correlated with each other at a given time. Note: based on a
-  later question, I do not understand this part (see part e of this exercise).
+  the variance of position should be equal to half of that. 
 
   \begin{gather}
-  cov(\delta_t) = \begin{pmatrix}\frac{1}{2} & 0 \\ 0 &
-  1\end{pmatrix}\Delta_t
+  cov(\delta_t) = \begin{pmatrix}\frac{1}{2} & 0 \\ 0 & 1\end{pmatrix}\Delta_t
   \end{gather}
 
   Now we have our probability $p(x_t | u_t,x_{t-1})$:
@@ -123,17 +119,25 @@ it out. C'est la vie.
   \begin{pmatrix}\frac{\Delta_t}{2} & 0 \\ 0 & \Delta_t\end{pmatrix}
   \end{gather}
 
+  We have to provide an initial value for $\Sigma_0$. In this case, I think it's
+  reasonable to assume that it is $0$. The uncertainty from the random
+  accelerations at each timestep will propagate into $\Sigma_t$, so it will not
+  remain $0$ for long.
+
+  Later, the Kalman gain will be used to select how much to weight the
+  prediction versus the correction (measurement), based on the relative
+  magnitudes of the covariances.
 
 \item \textit{Implement the state prediction step of the Kalman filter. Assuming
-  we know at time $t=x, x_0 = \dot{x}_0 = \ddot{x}_0 = 0$. Compute the state
-distributions for times $t=1,2,...,5$.}
+    we know at time $t=x, x_0 = \dot{x}_0 = \ddot{x}_0 = 0$. Compute the state
+  distributions for times $t=1,2,...,5$.}
 
 \item \textit{For each value of $t$, plot the joint posterior over $x$ and
-  $\dot{x}$ in a diagram, where x is the horizontal and $\dot{x}$ is the
-vertical axis. For each posterior, your are asked to plot an uncertainty
-ellipse, which is the ellipse of points that are one standar deviation away from
-the mean. Hint: if you do not have access to a mathematics library, you can
-create those ellipses by analyzing the eigenvalues of the covariance matrix.}
+    $\dot{x}$ in a diagram, where x is the horizontal and $\dot{x}$ is the
+    vertical axis. For each posterior, your are asked to plot an uncertainty
+    ellipse, which is the ellipse of points that are one standard deviation away from
+    the mean. Hint: if you do not have access to a mathematics library, you can
+  create those ellipses by analyzing the eigenvalues of the covariance matrix.}
 
 \item \textit{What will happen to the correlation between $x_t$ and $\dot{x}_t$
   as $t\to \infty$?}
