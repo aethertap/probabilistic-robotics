@@ -10,9 +10,9 @@
 filter for a simple dynamical system: a car with linear dynamics moving in a
 linear environment. Assume $\delta t = 1$ for simplicity. The position of the
 car at time $t$ is given by $x_t$. Its velocity is given by $\dot{x}_t$, and its
-acceleration is given by $\ddot{x}_t$. Suppose the acceleration is set
-randomly at each point in time, according to a Gaussian with zero mean and
-covariance $\sigma^2 = 1$.}
+acceleration [from time $t-1$ to time $t$] is given by $\ddot{x}_t$. Suppose the
+acceleration is set randomly at each point in time, according to a Gaussian with
+zero mean and covariance $\sigma^2 = 1$.}
 
 One thing I note: At first it sounded to me like we would know what the
 acceleration value was at each time step. This threw me off for a long time,
@@ -64,12 +64,19 @@ it out. C'est la vie.
   All that remains is to use the equations of motion to derive matrices for $A$
   and $B$. We know that:
   \begin{gather}
-    x_t = x_{t-1} + \dot{x}_{t-1} \Delta t \\ 
-    \dot{x}_t = \dot{x}_{t-1} 
+    x_t = x_{t-1} + \left(\frac{\dot{x}_{t-1}+\dot{x}_t}{2}\right) \Delta_t \\ 
+    \dot{x}_t = \dot{x}_{t-1} + \ddot{x}_t\Delta_t 
   \end{gather}
 
-  Note that we're ignoring acceleration in the above expressions, because we're
-  going to incorporate the acceleration via the error term.
+  Using our expression for $\dot{x}_t$ in the first equation yields:
+
+  \begin{gather}
+  x_t = x_{t-1} + \dot{x}_t-1\Delta_t + \frac{1}{2}\ddot{x}_t\Delta_t^2
+  \end{gather}
+
+  We use the average velocity between the start and end of the time slice to
+  calculate the new $x_t$ value, because the velocity has changed in the
+  interval as a result of the acceleration ($\ddot{x}_{t}$).
 
   There is no control action in this model, since there is no explicit (known)
   acceleration (i.e. the acceleration value is just a probability distribution
@@ -85,29 +92,52 @@ it out. C'est la vie.
 
   Next we need to model the covariance. Since we are given the variance of the
   acceleration (=1), we have to figure out how that maps into variance of the
-  two state variables and make a variance vector accordingly. The full equations
-  of motion would look like this:
+  two state variables and make a variance vector accordingly.
 
-  \begin{gather}
-    x_t = x_{t-1} + \left(\frac{\dot{x}_{t-1} + \dot{x}_t}{2}\right)\Delta_t\\
-    \dot{x}_t = \dot{x}_{t-1} + \ddot{x}_{t-1}\Delta_t
-  \end{gather}
-
-  We can eliminate $\dot{x}_t$ from the $x_t$ term by substituting in our
-  expression for $\dot{x}_t$:
-
-  \begin{gather}
-    x_t = x_{t-1} + \left(\dot{x}_{t-1} + \frac{\ddot{x}_{t-1}}{2}\right)\Delta_t
-  \end{gather}
+  From our equations of motion, we know that $x_t$ depends on $\ddot{x}_t$
+  scaled by $\frac{\Delta_t}{2}$, and we know that $\dot{x}_t$ depends on
+  $\ddot{x}_t$ without scaling (i.e. the scale factor is 1).
 
   That gives us what we need to figure out how the random acceleration should
   affect our estimates for position and velocity. The variance of velocity
   should be equal to the variance of acceleration times the time elapsed, and
-  the variance of position should be equal to half of that. 
+  the variance of position should be equal to half of the squared time elapsed. 
 
+  If we knew what the acceleration was at each step, we could add a correction
+  term to the above expression for the mean to get an exact answer. This is what
+  that term would look like:
   \begin{gather}
-  cov(\delta_t) = \begin{pmatrix}\frac{1}{2} & 0 \\ 0 & 1\end{pmatrix}\Delta_t
+  \delta_t = \begin{pmatrix}\frac{\Delta_t^2}{2} \\ \Delta_t\end{pmatrix} \ddot{x}_t
   \end{gather}
+  
+  However, we don't have knowledge of $\ddot{x}_t$, all we know is that it's
+  gaussian with mean zero and std deviation 1. We therefore need to turn that
+  equation into a multivariate gaussian distribution, which when added to our
+  mean will yield the total probability distribution for $x_t$. In order to do
+  that, we need to calculate a covariance matrix based on the vector $\delta_t$
+  (which is telling us how much the acceleration impacts each of the state
+  variables).
+
+  We know the variance of the acceleration, but we need to figure out how that
+  maps into the variance of the position and velocity. Our $\delta$ vector gives
+  us the scaling factors - if we know the standard deviation of $\ddot{x}_t$,
+  then we could scale it by the values in $\delta_t$ to see how it would change
+  the standard deviation of $x_t$ and $\dot{x}_t$. However, since we're working
+  with a gaussian distribution, we want to use variance. That means that we're
+  working with the squared standard deviation, so we need to apply the
+  appropriate analogous operation to $\delta_t$ in order to make a covariance
+  matrix. We can do that by calculating $\delta_t \delta_t^T$ (yes, I'm
+  hand-waving a bit here because I haven't figured out the intuitive explanation
+  for \textit{why} this should make the right covariance matrix yet...):
+
+  \begin{align}
+    R = cov\left(\delta_t\right) = \delta_t \delta_t^T &=& 
+  \begin{pmatrix}\frac{\Delta_t^2}{2} \\ \Delta_t\end{pmatrix} 
+  \begin{pmatrix}\frac{\Delta_t^2}{2} & \Delta_t\end{pmatrix} \\
+                                      &=&
+  \begin{pmatrix}\frac{\Delta_t^4}{4} & \frac{\Delta_t^3}{2} \\
+    \frac{\Delta_t^3}{2} & \Delta_t^2 \end{pmatrix}
+  \end{align}
 
   Now we have our probability $p(x_t | u_t,x_{t-1})$:
   \begin{gather}
@@ -116,8 +146,9 @@ it out. C'est la vie.
   \overline{\Sigma}_t = \begin{pmatrix}1 & \Delta_t \\ 0 & 1\end{pmatrix}
     \Sigma_{t-1}
   \begin{pmatrix}1 & 0 \\ \Delta_t & 1\end{pmatrix} + 
-  \begin{pmatrix}\frac{\Delta_t}{2} & 0 \\ 0 & \Delta_t\end{pmatrix}
-  \end{gather}
+  \begin{pmatrix}\frac{\Delta_t^4}{4} & \frac{\Delta_t^3}{2} \\
+  \frac{\Delta_t^3}{2} & \Delta_t^2 \end{pmatrix} \sigma_{\ddot{x}_t}^2
+ \end{gather}
 
   We have to provide an initial value for $\Sigma_0$. In this case, I think it's
   reasonable to assume that it is $0$. The uncertainty from the random
