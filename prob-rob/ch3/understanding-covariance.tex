@@ -1,0 +1,53 @@
+\documentclass{article}
+\usepackage{amsmath}
+\author{Erik Lee}
+\date{2014-10-24}
+\title{A digression on the mysteries of covariance matrices}
+\begin{document}
+\maketitle
+
+One thing that I'm struggling with is getting a solid grasp of how to make a
+covariance matrix out of a transition vector and a variance. Taking the example
+from the book (Probabilistic Robotics, ch3, ex 1), we have a linear system
+undergoing random, unpredictable accelerations. Our state vector is
+$\left(x \dot{x}\right)^T$, and the acceleration ($\ddot{x}$) is known to have
+mean zero and variance 1.
+
+\begin{gather}
+  x_t = x_{t-1} + \dot{x}_t-1\Delta_t + \frac{1}{2}\ddot{x}_t\Delta_t^2 \\
+  \dot{x}_t = \dot{x}_{t-1} + \ddot{x}_t\Delta_t 
+\end{gather}
+
+See the chapter 3 solutions for details about how I solved this, my concern
+here is trying to figure out why the covariance matrix should be what it is.
+
+To start with, we know that the variance of the acceleration
+($\sigma_{\ddot{x}_t}^2$) is 1. We know that the acceleration should contribute
+to the position and velocity according to these equations:
+
+\begin{gather}
+  \Delta x_a = a \frac{\Delta t^2}{2} \\
+  \Delta \dot{x}_a = a \Delta t 
+\end{gather}
+
+What we want to do is figure out what the effect of a given variance on
+acceleration would be in terms of $x$ and $\dot{x}$. Assume that there aren't
+any other unknown influences on the state variables, so that \textit{all} of
+their respective uncertainty arises from uncertainty in the acceleration. Then
+the standard deviation of the postion ($x$) should be just the standard
+deviation of the acceleration times the amount that the acceleration contributes
+to the calculation of $x$. For example, if the standard deviation of the
+acceleration is 1 $m/s^2$, then over the course of $dt$ seconds, the standard
+deviation of $x$ should increase by $\frac{dt^2}/{2}$, and the standard
+deviation of the velocity should increase by $dt$. Now here's where it gets
+tricky - if we \textit{already} have some uncertainty in the velocity, and we
+then add \textit{more} uncertainty via the acceleration, then \textit{both} of
+those uncertainties have to combine to create the total uncertainty in the
+position. Likewise, the prior uncertainty in the velocity has to contribute to
+the new uncertainty along with the added uncertainty from the acceleration.
+That's where the covariance matrix comes into play. The total uncertainty in $x$
+is going to be the sum of the uncertainty in the velocity and the undertainty in
+the acceleration, with their respective scaling factors applied.
+
+
+\end{document}
