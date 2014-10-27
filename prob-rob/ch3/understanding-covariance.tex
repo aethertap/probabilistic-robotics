@@ -1,4 +1,5 @@
-\documentclass{article}
+\documentclass[12pt]{article}
+\usepackage[margin=0.5in]{geometry}
 \usepackage{amsmath}
 \author{Erik Lee}
 \date{2014-10-24}
@@ -13,21 +14,21 @@ motion. That sentence is a tortured mess, let me try it with math:
 
 If we have these equations of motion:
 
-\begin{gather}
-  x_t = x_{t-1} + \dot{x}_{t-1} \Delta_t + \frac{\Delta_t^2}{2} \ddot{x}_t \\
-  \dot{x}_t = \dot{x}_{t-1} + \Delta_t \ddot{x}_t
-\end{gather}
+\begin{align}
+  x_t &= x_{t-1} + \dot{x}_{t-1} \Delta_t + \frac{\Delta_t^2}{2} \ddot{x}_t \\
+  \dot{x}_t &= \dot{x}_{t-1} + \Delta_t \ddot{x}_t
+\end{align}
 
 And we want to figure out how variance of $\ddot{x}$ affects the variance of $x$
 and $\dot{x}$, why should it be the case that we make a vector out of the
 coefficients of $\ddot{x}$ for each equation, then multiply it by its transpose:
 
-\begin{gather}
-cov_a(x,\dot{x}) = \begin{pmatrix}\frac{\Delta_t^2}{2} \\ \Delta_t\end{pmatrix}
-\begin{pmatrix}\frac{\Delta_t^2}{2} && \Delta_t\end{pmatrix} =
-\begin{pmatrix}\frac{\Delta_t^4}{4} && \frac{\Delta_t^3}{2} \\
-\frac{\Delta_t^3}{2} && t^2 \end{pmatrix}
-\end{gather}
+\begin{align}
+cov_a(x,\dot{x}) &= \begin{pmatrix}\frac{\Delta_t^2}{2} \\ \Delta_t\end{pmatrix}
+\begin{pmatrix}\frac{\Delta_t^2}{2} & \Delta_t\end{pmatrix}\sigma_a^2\\
+ &= \begin{pmatrix}\frac{\Delta_t^4}{4} & \frac{\Delta_t^3}{2} \\
+\frac{\Delta_t^3}{2} & t^2 \end{pmatrix}\sigma_a^2
+\end{align}
 
 To try to figure this out, I decided to start at the base definition of
 covariance and work from there. tl;dr: Since $x$ and $\dot{x}$ are linear
@@ -38,8 +39,113 @@ above gives you all possible combinations of pairwise products between the
 variables, so it's a convenient way to get the data you need. It also happens to
 organize it in a way that's predictable, and can thus be used in the formula for
 a multivariate gaussian distribution. Read on below if you want to see the math
-I did to get there (it's not very hard, you can tell because I was able to do it
-at 10:00 at night when I finally decided to just grind through it).
+I did to get there. 
 
+Here's the setup: We have two variables that are functions of each other and of
+a third variable. The third variable (in this case acceleration) has a variance,
+and we want to see how the variance of that third variable propagates itself
+through to the other two variables, given their function definitions:
+
+\begin{align}
+  x &= f(y,a)\\
+  y &= g(a) \\
+  cov(x,y) &= E[(x y - E(x)E(y))^2] \\
+           &= \sum_i f(y,a_i)f(a_i) + \left(\sum_j f(y,a_j)p(a_j)\right)\left(\sum_k g(a_k)p(a_k)\right)
+\end{align}
+
+Now, that pretty much stopped me, so I decided to assume the functions $f$ and
+$g$ are linear in $a$ (which happens to be the case here):
+
+\begin{align}
+  x &= f(y,a)\\
+    &= f_1(y)F_1a + f_2(y)F_2 + F_3\\
+  y &= g(a) \\
+    &= G_1g_1(a) + G_2 
+\end{align}
+
+Now, since all we care about is how changes in $a$ affect the outcome, we can
+treat everything that doesn't have an $a$ term as constant, and simplify our
+expressions to this:
+
+\begin{align}
+  x &= f(a)\\
+    &= F_1 a + F_2\\
+  y &= g(a) \\
+    &= G_1 a + G_2
+\end{align}
+
+Now we plug those formulas into the covariance definition to see what the
+covariance of x and y are:
+
+\begin{align}
+  & cov(x,y) =  E\left[\left(f(a)g(a) -
+  E\left(f(a)\right)E\left(g(a)\right)\right)^2\right] \\
+           &= \sum_i \left[\left(F_1 a_i + F_2\right)\left(G_1 a_i + G_2 \right) +
+  \left(\sum_j (F_1 a_j+ F_2) p(a_j)\right)
+\left(\sum_k (G_1 a_k + G_2) p(a_k)\right)\right]p(a_i)\\
+&= \sum_i \left[\left(F_1 G_1 a_i^2 + (F_1 G_2 + F_2 G_1)a_i + F_2 G_2\right) -
+\left(F_2 + F_1 \sum_j a_j p(a_j)\right)\left(G_2 + G_1\sum_k a_k
+p(a_k)\right)\right]p(a_i)\\
+&= \sum_i \left[\left (F_1 G_1 a_i^2 + (F_1 G_2 + F_2 G_1)a_i+F_2 G_2\right) -
+\left(F_2 + F_1 E(a)\right)\left(G_2+G_1 E(a)\right)\right]p(a_i)
+\end{align}
+
+In the above, we just noticed that the sum terms on the right simplify down to
+the expected value of $a$ passed through the original functions $f$ and $g$,
+which is a constant with respect to the sum, so we can pull it out):
+
+\begin{align}
+  &cov(x,y) = \sum_i \left[\left (F_1 G_1 a_i^2 + (F_1 G_2 + F_2 G_1)a_i+F_2 G_2\right) -
+\left(F_2 + F_1 E(a)\right)\left(G_2+G_1 E(a)\right)\right]p(a_i)\\
+&= \left(\sum_i \left (F_1 G_1 a_i^2 + (F_1 G_2 + F_2 G_1)a_i+F_2 G_2\right)p(a_i)\right) -
+\left(F_2 G_2 + (F_2 G_1 + F_1 G_2) E(a) + F_1 G_1 E(a)^2\right)
+\end{align}
+
+Now we can start to see a pattern. The left term looks a lot like $E(a^2)$ (with
+some extra stuff), and the right side looks like $E(a)E(a)$ (with some extra
+stuff):
+
+\begin{align}
+  &cov(x,y) = \left(\sum_i (F_1 G_2 + F_2 G_1)a_ip(a_i)\right) + F_1 G_1 E(a^2)
+  -(F_2 G_1 + F_1 G_2) E(a) - F_1 G_1 E(a)^2
+\end{align}
+
+Now we notice that the two terms that aren't quadratic both cancel!
+
+\begin{align}
+  &cov(x,y) = \left(\sum_i (F_1 G_2 + F_2 G_1)a_ip(a_i)\right) + F_1 G_1 E(a^2)
+  -(F_2 G_1 + F_1 G_2) E(a) - F_1 G_1 E(a)^2\\
+  &= (F_1 G_2 + F_2 G_1)E(a) -(F_2 G_1 + F_1 G_2) E(a)  +  F_1 G_1 E(a^2) - F_1
+  G_1 E(a)^2\\
+  &= F_1 G_1 E(a^2) - F_1 G_1 E(a)^2\\
+  &= F_1 G_1 (E(a^2) - E(a)^2) \\
+  &= F_1 G_1 \sigma_a^2
+\end{align}
+
+Phew! Okay, so what we have learned is that the constant factors in the linear
+equation all cancel out (no surprise, since we're measuring variance). All we
+have to do to figure out what $a$'s variance contributes to $x$'s and $y$'s
+variances is to take all of the coefficients of terms with $a$ in them from the
+equations for $x$ and $y$ and multiply them together! So, it turns out that the
+vector product 
+
+\begin{align}
+cov(\vec{x}_a) &= \begin{pmatrix}x_a \\ \dot{x}_a\end{pmatrix}\begin{pmatrix}x_a & \dot{x}_a\end{pmatrix}\sigma_a^2\\
+  &= \begin{pmatrix}\frac{\Delta_t^2}{2} \\ \Delta_t\end{pmatrix}
+\begin{pmatrix}\frac{\Delta_t^2}{2} & \Delta_t\end{pmatrix}\sigma_a^2\\
+  &= \begin{pmatrix}\frac{\Delta_t^4}{4} & \frac{\Delta_t^3}{2} \\
+\frac{\Delta_t^3}{2} & t^2 \end{pmatrix}\sigma_a^2
+\end{align}
+
+gives us exactly what we're looking for. In general, we can say that the
+covariance of any two variables is going to follow the coefficient product rule
+from above, so what we want to do is have a matrix that has all possible
+pairwise combinations of variables from the vector. This is what the product
+above yields, and this is why you can take the coefficients of the $a$ terms,
+multiply them together, and make a covariance matrix out of it. 
+
+Hopefully that is as useful to your understanding as it was to mine. I couldn't
+see the relationship between the $a$ coefficients of $x,y$ and the covariance
+matrix before doing this.  
 
 \end{document}
