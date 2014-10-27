@@ -6,48 +6,40 @@
 \begin{document}
 \maketitle
 
-One thing that I'm struggling with is getting a solid grasp of how to make a
-covariance matrix out of a transition vector and a variance. Taking the example
-from the book (Probabilistic Robotics, ch3, ex 1), we have a linear system
-undergoing random, unpredictable accelerations. Our state vector is
-$\left(x \dot{x}\right)^T$, and the acceleration ($\ddot{x}$) is known to have
-mean zero and variance 1.
+I struggled for a long time trying to get some intuition about why it is that
+the covariance matrix should be given by $\vec{v} \vec{v}^T$, where $\vec{v}$ is
+the vector of coefficients for the source of variance in the equations of
+motion. That sentence is a tortured mess, let me try it with math:
+
+If we have these equations of motion:
 
 \begin{gather}
-  x_t = x_{t-1} + \dot{x}_t-1\Delta_t + \frac{1}{2}\ddot{x}_t\Delta_t^2 \\
-  \dot{x}_t = \dot{x}_{t-1} + \ddot{x}_t\Delta_t 
+  x_t = x_{t-1} + \dot{x}_{t-1} \Delta_t + \frac{\Delta_t^2}{2} \ddot{x}_t \\
+  \dot{x}_t = \dot{x}_{t-1} + \Delta_t \ddot{x}_t
 \end{gather}
 
-See the chapter 3 solutions for details about how I solved this, my concern
-here is trying to figure out why the covariance matrix should be what it is.
-
-To start with, we know that the variance of the acceleration
-($\sigma_{\ddot{x}_t}^2$) is 1. We know that the acceleration should contribute
-to the position and velocity according to these equations:
+And we want to figure out how variance of $\ddot{x}$ affects the variance of $x$
+and $\dot{x}$, why should it be the case that we make a vector out of the
+coefficients of $\ddot{x}$ for each equation, then multiply it by its transpose:
 
 \begin{gather}
-  \Delta x_a = a \frac{\Delta t^2}{2} \\
-  \Delta \dot{x}_a = a \Delta t 
+cov_a(x,\dot{x}) = \begin{pmatrix}\frac{\Delta_t^2}{2} \\ \Delta_t\end{pmatrix}
+\begin{pmatrix}\frac{\Delta_t^2}{2} && \Delta_t\end{pmatrix} =
+\begin{pmatrix}\frac{\Delta_t^4}{4} && \frac{\Delta_t^3}{2} \\
+\frac{\Delta_t^3}{2} && t^2 \end{pmatrix}
 \end{gather}
 
-What we want to do is figure out what the effect of a given variance on
-acceleration would be in terms of $x$ and $\dot{x}$. Assume that there aren't
-any other unknown influences on the state variables, so that \textit{all} of
-their respective uncertainty arises from uncertainty in the acceleration. Then
-the standard deviation of the postion ($x$) should be just the standard
-deviation of the acceleration times the amount that the acceleration contributes
-to the calculation of $x$. For example, if the standard deviation of the
-acceleration is 1 $m/s^2$, then over the course of $dt$ seconds, the standard
-deviation of $x$ should increase by $\frac{dt^2}/{2}$, and the standard
-deviation of the velocity should increase by $dt$. Now here's where it gets
-tricky - if we \textit{already} have some uncertainty in the velocity, and we
-then add \textit{more} uncertainty via the acceleration, then \textit{both} of
-those uncertainties have to combine to create the total uncertainty in the
-position. Likewise, the prior uncertainty in the velocity has to contribute to
-the new uncertainty along with the added uncertainty from the acceleration.
-That's where the covariance matrix comes into play. The total uncertainty in $x$
-is going to be the sum of the uncertainty in the velocity and the undertainty in
-the acceleration, with their respective scaling factors applied.
+To try to figure this out, I decided to start at the base definition of
+covariance and work from there. tl;dr: Since $x$ and $\dot{x}$ are linear
+functions with respect to $\ddot{x}$, their covariance terms are just the
+products of their coefficients. Their variances are the squares of their
+coefficients, and if you do the number crunching you see that the vector product
+above gives you all possible combinations of pairwise products between the
+variables, so it's a convenient way to get the data you need. It also happens to
+organize it in a way that's predictable, and can thus be used in the formula for
+a multivariate gaussian distribution. Read on below if you want to see the math
+I did to get there (it's not very hard, you can tell because I was able to do it
+at 10:00 at night when I finally decided to just grind through it).
 
 
 \end{document}
